@@ -168,3 +168,16 @@ body[data-calendar-style="lined"] .day{background-image:repeating-linear-gradien
 @media(max-width:900px) and (orientation:landscape){.calendar{min-height:408px}}
 .tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
+
+
+/* ===== 가꾸 구매자 인증 ===== */
+body.auth-pending{overflow:hidden}
+body.auth-pending .app-shell{visibility:hidden}
+.auth-gate{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:18px;background:linear-gradient(180deg,#f7f2ea,#f1e8de)}
+.auth-gate.hidden{display:none}
+.auth-card{width:min(460px,100%);background:#fffdf9;border:1px solid #eadfd6;border-radius:28px;padding:28px 22px;box-shadow:0 24px 70px rgba(92,67,55,.16);text-align:center;color:#4c403a}
+.auth-badge{display:inline-flex;padding:7px 12px;border-radius:999px;background:#f3e8df;color:#9a6858;font-size:12px;font-weight:900}
+.auth-card h1{font-size:30px;margin:13px 0 8px}.auth-sub{font-size:13px;line-height:1.7;color:#8d7f77;margin:0 0 18px}.auth-label{display:block;text-align:left;font-size:12px;font-weight:900;color:#6f625b;margin:0 0 6px}
+.auth-input{width:100%;border:1px solid #dfd2c8;background:#fff;border-radius:14px;padding:14px 13px;font:800 16px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;color:#4c403a;outline:none}.auth-input:focus{border-color:#b7836f;box-shadow:0 0 0 3px rgba(183,131,111,.12)}
+.auth-submit{width:100%;margin-top:10px;border:0;border-radius:14px;padding:14px;background:#b7836f;color:#fff;font-weight:900}.auth-submit:disabled{opacity:.55}.auth-message{min-height:24px;margin-top:10px;font-size:12px;font-weight:800;line-height:1.5}.auth-message.error{color:#b94f5d}.auth-message.ok{color:#55836b}.auth-help{font-size:10.5px;line-height:1.6;color:#a0938b;margin:13px 0 0}
+@media(max-width:520px){.auth-card{padding:24px 17px;border-radius:22px}.auth-card h1{font-size:27px}}

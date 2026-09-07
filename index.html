@@ -6,7 +6,21 @@
 <title>가꾸 가계부</title>
 <link rel="stylesheet" href="styles.css">
 </head>
-<body data-theme="cream">
+<body data-theme="cream" class="auth-pending">
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-badge">🔐 구매자 인증</div>
+    <h1>가꾸 가계부</h1>
+    <p class="auth-sub">구매 후 전달받은 인증코드를 입력해 주세요.<br>인증은 기본 1대의 기기에서 사용할 수 있어요.</p>
+    <form id="authForm">
+      <label class="auth-label">인증코드</label>
+      <input id="authCode" class="auth-input" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="GAKKU-XXXX-XXXX-XXXX">
+      <button id="authSubmit" class="auth-submit" type="submit">인증하고 시작하기</button>
+    </form>
+    <div id="authMessage" class="auth-message"></div>
+    <p class="auth-help">기기 변경이나 인증 문제가 있으면 구매하신 크몽 주문의 메시지로 문의해 주세요.</p>
+  </div>
+</div>
 <div class="app-shell">
   <header class="hero">
     <div class="hero-copy">
@@ -17,6 +31,7 @@
     <div class="hero-actions">
       <button id="todayBtn" class="soft-btn">오늘</button>
       <button id="openCustomizeBtn" class="soft-btn">🎀 꾸미기</button>
+      <button id="authManageBtn" class="soft-btn">🔐 인증 해제</button>
     </div>
   </header>
 
@@ -418,6 +433,7 @@
   </div>
 </div>
 
+<script src="auth.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
