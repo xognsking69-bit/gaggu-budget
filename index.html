@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>가꾸 가계부</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="cream">
+<div class="app-shell">
+  <header class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">포근하게 기록하는 하루의 돈 이야기</span>
+      <h1>가꾸 가계부 <span>♡</span></h1>
+      <p>달력에서 날짜를 누르고 기록하면, 그날의 총 금액과 사진이 한눈에 보여요.</p>
+    </div>
+    <div class="hero-actions">
+      <button id="todayBtn" class="soft-btn">오늘</button>
+      <button id="openCustomizeBtn" class="soft-btn">🎀 꾸미기</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="calendar">📅 달력</button>
+    <button class="tab" data-tab="budget">💰 예산</button>
+    <button class="tab" data-tab="fixed">🏠 고정비</button>
+    <button class="tab" data-tab="stats">📊 통계</button>
+  </nav>
+
+  <main>
+    <section id="tab-calendar" class="tab-panel active">
+      <section class="summary-grid">
+        <article class="summary-card income"><span>이번 달 수입</span><strong id="incomeTotal">0원</strong></article>
+        <article class="summary-card expense"><span>이번 달 지출</span><strong id="expenseTotal">0원</strong></article>
+        <article class="summary-card balance"><span>이번 달 잔액</span><strong id="balanceTotal">0원</strong></article>
+        <article class="summary-card budget"><span>남은 예산</span><strong id="budgetRemain">0원</strong></article>
+      </section>
+
+      <section class="paper-card calendar-card">
+        <div class="calendar-head">
+          <button id="prevMonth" class="round-btn">‹</button>
+          <div class="month-title-wrap">
+            <div class="tiny-label">MONTHLY CALENDAR</div>
+            <h2 id="monthTitle"></h2>
+          </div>
+          <button id="nextMonth" class="round-btn">›</button>
+        </div>
+        <div class="weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div id="calendar" class="calendar"></div>
+      </section>
+
+      <section class="paper-card day-card">
+        <div class="section-row">
+          <div>
+            <span class="eyebrow">선택한 날짜</span>
+            <h2 id="selectedDateTitle">날짜를 선택해 주세요</h2>
+          </div>
+          <span id="selectedDayTotal" class="pill">0원</span>
+        </div>
+
+        <form id="entryForm" class="entry-form">
+          <div class="segmented">
+            <label><input type="radio" name="type" value="expense" checked><span>지출</span></label>
+            <label><input type="radio" name="type" value="income"><span>수입</span></label>
+          </div>
+
+          <div class="form-grid">
+            <label>카테고리
+              <select id="category"></select>
+            </label>
+            <label>내용
+              <input id="description" placeholder="예: 점심, 월급, 마트">
+            </label>
+            <label>금액
+              <input id="amount" type="number" inputmode="numeric" min="0" step="1" placeholder="예: 15000">
+            </label>
+            <label>결제수단
+              <select id="payment">
+                <option>카드</option><option>현금</option><option>계좌이체</option><option>간편결제</option><option>기타</option>
+              </select>
+            </label>
+            <label class="wide">메모
+              <input id="memo" placeholder="선택 입력">
+            </label>
+          </div>
+          <button class="primary-btn" type="submit">기록 저장</button>
+        </form>
+
+        <div class="records-head">
+          <h3>이날 기록</h3>
+          <button id="clearDayBtn" class="danger-link" type="button">이날 전체 삭제</button>
+        </div>
+        <div id="records" class="records"></div>
+
+        <div class="photo-section">
+          <div class="section-row">
+            <div>
+              <h3>📷 이날의 사진</h3>
+              <p class="muted">영수증, 소비 기록, 하루의 순간을 함께 남겨보세요.</p>
+            </div>
+            <label class="upload-btn">사진 추가
+              <input id="photoInput" type="file" accept="image/*" multiple>
+            </label>
+          </div>
+          <div id="photoGrid" class="photo-grid"></div>
+        </div>
+      </section>
+
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">월간 기록</span><h2>이번 달 전체 내역</h2></div>
+          <button id="backupBtn" class="soft-btn">백업 저장</button>
+        </div>
+        <div class="toolbar">
+          <input id="searchInput" placeholder="내용·카테고리 검색">
+          <label class="restore-btn">백업 불러오기<input id="restoreInput" type="file" accept=".json,application/json"></label>
+        </div>
+        <div id="monthRecords" class="month-records"></div>
+      </section>
+    </section>
+
+    <section id="tab-budget" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">MONTHLY BUDGET</span><h2>월 예산 관리</h2></div>
+          <span id="budgetPercent" class="pill">0%</span>
+        </div>
+        <div class="budget-box">
+          <label>이번 달 예산
+            <div class="money-input"><input id="monthlyBudget" type="number" inputmode="numeric" min="0" placeholder="예: 1200000"><span>원</span></div>
+          </label>
+          <button id="saveBudgetBtn" class="primary-btn">예산 저장</button>
+        </div>
+        <div class="progress-track"><div id="budgetProgress" class="progress-bar"></div></div>
+        <div class="budget-metrics">
+          <div><span>예산</span><strong id="budgetMetric">0원</strong></div>
+          <div><span>사용</span><strong id="spentMetric">0원</strong></div>
+          <div><span>남음</span><strong id="remainMetric">0원</strong></div>
+        </div>
+      </section>
+
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">CATEGORY BUDGET</span><h2>카테고리별 사용액</h2></div>
+        </div>
+        <div id="categoryBudgetList" class="category-bars"></div>
+      </section>
+    </section>
+
+    <section id="tab-fixed" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">FIXED EXPENSE</span><h2>고정비 관리</h2></div>
+        </div>
+        <form id="fixedForm" class="form-grid compact">
+          <label>이름<input id="fixedName" placeholder="예: 월세"></label>
+          <label>금액<input id="fixedAmount" type="number" inputmode="numeric" min="0" placeholder="예: 500000"></label>
+          <label>결제일<input id="fixedDay" type="number" min="1" max="31" placeholder="예: 25"></label>
+          <label>카테고리<select id="fixedCategory"></select></label>
+          <label class="wide">메모<input id="fixedMemo" placeholder="선택 입력"></label>
+          <button class="primary-btn wide" type="submit">고정비 추가</button>
+        </form>
+        <div id="fixedList" class="fixed-list"></div>
+      </section>
+    </section>
+
+    <section id="tab-stats" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row"><div><span class="eyebrow">MONTHLY STATS</span><h2>이번 달 통계</h2></div></div>
+        <div class="stats-kpis">
+          <div><span>수입</span><strong id="statIncome">0원</strong></div>
+          <div><span>지출</span><strong id="statExpense">0원</strong></div>
+          <div><span>저축률</span><strong id="savingRate">0%</strong></div>
+        </div>
+        <div id="statBars" class="category-bars"></div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div id="customizeModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="section-row">
+      <div><span class="eyebrow">MY STYLE</span><h2>내 마음대로 꾸미기</h2></div>
+      <button id="closeCustomizeBtn" class="round-btn">×</button>
+    </div>
+
+    <div class="custom-group">
+      <h3>기본 테마</h3>
+      <div class="theme-grid">
+        <button class="theme-chip" data-theme="cream">🧸 포근 크림</button>
+        <button class="theme-chip" data-theme="strawberry">🍓 딸기우유</button>
+        <button class="theme-chip" data-theme="lavender">🪻 라벤더</button>
+        <button class="theme-chip" data-theme="mint">🌿 민트</button>
+        <button class="theme-chip" data-theme="sky">☁️ 하늘</button>
+      </div>
+    </div>
+
+    <div class="custom-group">
+      <h3>달력 스타일</h3>
+      <div class="theme-grid">
+        <button class="calendar-style-chip" data-style="soft">포근 카드</button>
+        <button class="calendar-style-chip" data-style="lined">다이어리 라인</button>
+        <button class="calendar-style-chip" data-style="plain">미니멀</button>
+      </div>
+    </div>
+
+    <div class="custom-group">
+      <h3>직접 색상 선택</h3>
+      <div class="color-row">
+        <label>배경<input id="customBg" type="color" value="#f7f2ea"></label>
+        <label>포인트<input id="customAccent" type="color" value="#b7836f"></label>
+        <label>카드<input id="customCard" type="color" value="#fffdf9"></label>
+      </div>
+      <button id="applyColorsBtn" class="soft-btn full">직접 색상 적용</button>
+    </div>
+
+    <div class="custom-group">
+      <h3>카테고리 이모지</h3>
+      <div id="emojiEditor" class="emoji-editor"></div>
+    </div>
+  </div>
+</div>
+
+<div id="photoViewer" class="modal hidden">
+  <div class="viewer-card">
+    <button id="closeViewerBtn" class="viewer-close">×</button>
+    <img id="viewerImage" alt="사진 크게 보기">
+    <div class="viewer-actions">
+      <button id="deletePhotoBtn" class="danger-btn">사진 삭제</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
