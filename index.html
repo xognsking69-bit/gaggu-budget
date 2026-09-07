@@ -25,6 +25,10 @@
     <button class="tab" data-tab="budget">💰 예산</button>
     <button class="tab" data-tab="fixed">🏠 고정비</button>
     <button class="tab" data-tab="stats">📊 통계</button>
+    <button class="tab" data-tab="report">🌷 소비 리포트</button>
+    <button class="tab" data-tab="goals">🎯 저축 목표</button>
+    <button class="tab" data-tab="subscriptions">💳 구독</button>
+    <button class="tab" data-tab="yearly">🗓️ 연간</button>
   </nav>
 
   <main>
@@ -58,6 +62,24 @@
             <h2 id="selectedDateTitle">날짜를 선택해 주세요</h2>
           </div>
           <span id="selectedDayTotal" class="pill">0원</span>
+        </div>
+
+        <div class="quick-entry">
+          <div class="quick-head">
+            <div><b>⚡ 빠른 입력</b><span>자주 쓰는 금액을 한 번에 기록해요.</span></div>
+          </div>
+          <div class="quick-grid">
+            <select id="quickCategory"></select>
+            <input id="quickDescription" placeholder="예: 점심">
+            <div class="quick-amounts">
+              <button type="button" data-quick-amount="5000">5천</button>
+              <button type="button" data-quick-amount="10000">1만</button>
+              <button type="button" data-quick-amount="20000">2만</button>
+              <button type="button" data-quick-amount="50000">5만</button>
+            </div>
+            <input id="quickAmount" type="number" inputmode="numeric" min="0" placeholder="직접 금액">
+            <button id="quickSaveBtn" class="quick-save" type="button">바로 지출 기록</button>
+          </div>
         </div>
 
         <form id="entryForm" class="entry-form">
@@ -145,6 +167,15 @@
         <div class="section-row">
           <div><span class="eyebrow">CATEGORY BUDGET</span><h2>카테고리별 사용액</h2></div>
         </div>
+        <div class="category-budget-editor">
+          <div class="section-row">
+            <div>
+              <h3>카테고리별 예산</h3>
+              <p class="muted">80%부터 주의, 100% 이상이면 초과로 표시돼요.</p>
+            </div>
+          </div>
+          <div id="categoryBudgetEditor" class="category-budget-grid"></div>
+        </div>
         <div id="categoryBudgetList" class="category-bars"></div>
       </section>
     </section>
@@ -160,6 +191,7 @@
           <label>결제일<input id="fixedDay" type="number" min="1" max="31" placeholder="예: 25"></label>
           <label>카테고리<select id="fixedCategory"></select></label>
           <label class="wide">메모<input id="fixedMemo" placeholder="선택 입력"></label>
+<label class="wide check-row"><input id="fixedAuto" type="checkbox" checked> 매달 자동으로 지출에 반영</label>
           <button class="primary-btn wide" type="submit">고정비 추가</button>
         </form>
         <div id="fixedList" class="fixed-list"></div>
@@ -176,6 +208,75 @@
         </div>
         <div id="statBars" class="category-bars"></div>
       </section>
+
+    <section id="tab-report" class="tab-panel">
+      <section class="paper-card report-card" id="reportCard">
+        <div class="section-row">
+          <div><span class="eyebrow">MONTHLY STORY</span><h2>🌷 이번 달 소비 리포트</h2></div>
+          <button id="saveReportImageBtn" class="soft-btn">📷 리포트 PNG 저장</button>
+        </div>
+        <div class="report-hero">
+          <div><span>이번 달 지출</span><strong id="reportExpense">0원</strong></div>
+          <div id="monthCompareText" class="report-message">지난달과 비교할 기록을 모으는 중이에요 ♡</div>
+        </div>
+        <div class="report-grid">
+          <div class="report-box"><span>수입</span><strong id="reportIncome">0원</strong></div>
+          <div class="report-box"><span>남긴 돈</span><strong id="reportBalance">0원</strong></div>
+          <div class="report-box"><span>예산 사용률</span><strong id="reportBudgetRate">0%</strong></div>
+          <div class="report-box"><span>가장 큰 소비</span><strong id="reportTopCategory">-</strong></div>
+        </div>
+        <h3 class="subheading">최근 6개월 지출 흐름</h3>
+        <div id="sixMonthChart" class="month-chart"></div>
+      </section>
+    </section>
+
+    <section id="tab-goals" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row"><div><span class="eyebrow">SAVINGS GOAL</span><h2>🎯 저축 목표</h2></div></div>
+        <form id="goalForm" class="form-grid compact">
+          <label>목표 이름<input id="goalName" placeholder="예: 일본 여행"></label>
+          <label>목표 금액<input id="goalTarget" type="number" inputmode="numeric" min="1" placeholder="예: 1000000"></label>
+          <label>현재 모은 금액<input id="goalCurrent" type="number" inputmode="numeric" min="0" placeholder="예: 250000"></label>
+          <label>목표 날짜<input id="goalDate" type="date"></label>
+          <button class="primary-btn wide" type="submit">목표 추가</button>
+        </form>
+        <div id="goalList" class="goal-list"></div>
+      </section>
+    </section>
+
+    <section id="tab-subscriptions" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row"><div><span class="eyebrow">SUBSCRIPTIONS</span><h2>💳 구독 관리</h2></div><span id="subscriptionMonthlyTotal" class="pill">월 0원</span></div>
+        <form id="subscriptionForm" class="form-grid compact">
+          <label>서비스명<input id="subscriptionName" placeholder="예: 넷플릭스"></label>
+          <label>금액<input id="subscriptionAmount" type="number" inputmode="numeric" min="1" placeholder="예: 17000"></label>
+          <label>결제일<input id="subscriptionDay" type="number" min="1" max="31" placeholder="예: 12"></label>
+          <label>카테고리<select id="subscriptionCategory"></select></label>
+<label class="wide check-row"><input id="subscriptionAuto" type="checkbox" checked> 매달 자동으로 지출에 반영</label>
+          <button class="primary-btn wide" type="submit">구독 추가</button>
+        </form>
+        <div id="subscriptionList" class="fixed-list"></div>
+      </section>
+    </section>
+
+    <section id="tab-yearly" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">YEARLY OVERVIEW</span><h2>🗓️ 연간 한눈에 보기</h2></div>
+          <select id="yearSelect" class="year-select"></select>
+        </div>
+        <div class="stats-kpis yearly-kpis">
+          <div><span>연간 수입</span><strong id="yearIncome">0원</strong></div>
+          <div><span>연간 지출</span><strong id="yearExpense">0원</strong></div>
+          <div><span>연간 잔액</span><strong id="yearBalance">0원</strong></div>
+          <div><span>월평균 지출</span><strong id="yearAvgExpense">0원</strong></div>
+        </div>
+        <h3 class="subheading">12개월 지출 흐름</h3>
+        <div id="yearChart" class="year-chart"></div>
+        <h3 class="subheading">올해 많이 쓴 카테고리</h3>
+        <div id="yearCategoryBars" class="category-bars"></div>
+      </section>
+    </section>
     </section>
   </main>
 </div>
