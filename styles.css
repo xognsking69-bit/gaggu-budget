@@ -160,3 +160,11 @@ body[data-calendar-style="lined"] .day{background-image:repeating-linear-gradien
 .record-actions{
   gap:7px;
 }
+
+/* v4.4 stability */
+.tab-panel{contain:layout style}
+.calendar{min-height:462px}
+@media(max-width:760px){.calendar{min-height:516px}}
+@media(max-width:900px) and (orientation:landscape){.calendar{min-height:408px}}
+.tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}

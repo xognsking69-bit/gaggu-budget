@@ -26,7 +26,6 @@
     <button class="tab" data-tab="fixed">🏠 고정비</button>
     <button class="tab" data-tab="stats">📊 통계</button>
     <button class="tab" data-tab="report">🌷 소비 리포트</button>
-    <button class="tab" data-tab="goals">🎯 저축 목표</button>
     <button class="tab" data-tab="subscriptions">💳 구독</button>
     <button class="tab" data-tab="yearly">🗓️ 연간</button>
     <button class="tab" data-tab="savings">🐷 저축</button>
@@ -204,7 +203,9 @@
 
     <section id="tab-stats" class="tab-panel">
       <section class="paper-card">
-        <div class="section-row"><div><span class="eyebrow">MONTHLY STATS</span><h2>이번 달 통계</h2></div></div>
+        <div class="section-row">
+          <div><span class="eyebrow">MONTHLY STATS</span><h2>이번 달 통계</h2></div>
+        </div>
         <div class="stats-kpis">
           <div><span>수입</span><strong id="statIncome">0원</strong></div>
           <div><span>지출</span><strong id="statExpense">0원</strong></div>
@@ -212,6 +213,7 @@
         </div>
         <div id="statBars" class="category-bars"></div>
       </section>
+    </section>
 
     <section id="tab-report" class="tab-panel">
       <section class="paper-card report-card" id="reportCard">
@@ -234,29 +236,18 @@
       </section>
     </section>
 
-    <section id="tab-goals" class="tab-panel">
-      <section class="paper-card">
-        <div class="section-row"><div><span class="eyebrow">SAVINGS GOAL</span><h2>🎯 저축 목표</h2></div></div>
-        <form id="goalForm" class="form-grid compact">
-          <label>목표 이름<input id="goalName" placeholder="예: 일본 여행"></label>
-          <label>목표 금액<input id="goalTarget" type="number" inputmode="numeric" min="1" placeholder="예: 1000000"></label>
-          <label>현재 모은 금액<input id="goalCurrent" type="number" inputmode="numeric" min="0" placeholder="예: 250000"></label>
-          <label>목표 날짜<input id="goalDate" type="date"></label>
-          <button class="primary-btn wide" type="submit">목표 추가</button>
-        </form>
-        <div id="goalList" class="goal-list"></div>
-      </section>
-    </section>
-
     <section id="tab-subscriptions" class="tab-panel">
       <section class="paper-card">
-        <div class="section-row"><div><span class="eyebrow">SUBSCRIPTIONS</span><h2>💳 구독 관리</h2></div><span id="subscriptionMonthlyTotal" class="pill">월 0원</span></div>
+        <div class="section-row">
+          <div><span class="eyebrow">SUBSCRIPTIONS</span><h2>💳 구독 관리</h2></div>
+          <span id="subscriptionMonthlyTotal" class="pill">월 0원</span>
+        </div>
         <form id="subscriptionForm" class="form-grid compact">
           <label>서비스명<input id="subscriptionName" placeholder="예: 넷플릭스"></label>
           <label>금액<input id="subscriptionAmount" type="number" inputmode="numeric" min="1" placeholder="예: 17000"></label>
           <label>결제일<input id="subscriptionDay" type="number" min="1" max="31" placeholder="예: 12"></label>
           <label>카테고리<select id="subscriptionCategory"></select></label>
-<label class="wide check-row"><input id="subscriptionAuto" type="checkbox" checked> 매달 자동으로 지출에 반영</label>
+          <label class="wide check-row"><input id="subscriptionAuto" type="checkbox" checked> 매달 자동으로 지출에 반영</label>
           <button class="primary-btn wide" type="submit">구독 추가</button>
         </form>
         <div id="subscriptionList" class="fixed-list"></div>
@@ -339,7 +330,6 @@
         </div>
         <div id="savingsList" class="records"></div>
       </section>
-    </section>
     </section>
   </main>
 </div>

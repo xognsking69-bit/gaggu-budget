@@ -36,6 +36,24 @@ function loadState(){
     return {records:[],monthlyBudget:{},fixed:[],theme:"cream",calendarStyle:"soft",customColors:null,categories:structuredClone(defaultCategories),goals:[],subscriptions:[],categoryBudgets:{},selectedYear:new Date().getFullYear(),savings:[],savingGoals:[]};
   }
 }
+
+if(Array.isArray(state.goals)&&state.goals.length && Array.isArray(state.savingGoals)){
+  const existingNames=new Set(state.savingGoals.map(g=>g.name));
+  let migrated=false;
+  for(const g of state.goals){
+    if(existingNames.has(g.name)) continue;
+    const start=isoDate(new Date());
+    let end=g.date||"";
+    if(!end){const d=new Date();d.setMonth(d.getMonth()+6);end=isoDate(d);}
+    state.savingGoals.push({id:g.id||uid(),name:g.name||"저축 목표",target:Number(g.target||0),start,end,createdAt:Date.now()});
+    if(Number(g.current||0)>0){
+      state.savings.push({id:uid(),type:"deposit",name:g.name||"저축",amount:Number(g.current),date:start,goalId:g.id||"",memo:"기존 저축 목표에서 자동 이전",createdAt:Date.now()});
+    }
+    migrated=true;
+  }
+  if(migrated){state.goals=[];localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}
+}
+
 state.categories=state.categories.map(c=>({...c,type:c.type||(["급여","부수입","용돈","상여금","환급","이자","중고판매","기타수입"].includes(c.name)?"income":"expense")}));
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
@@ -57,7 +75,20 @@ function openDB(){
 async function addPhotoRecord(rec){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).put(rec);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function getPhotosByDate(date){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(DB_STORE,"readonly");const idx=tx.objectStore(DB_STORE).index("date");const req=idx.getAll(IDBKeyRange.only(date));req.onsuccess=()=>res(req.result||[]);req.onerror=()=>rej(req.error)})}
 async function deletePhotoRecord(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
-async function photoCountsForDates(dates){const out={};for(const d of dates){out[d]=(await getPhotosByDate(d)).length}return out}
+async function photoCountsForDates(dates){
+  const wanted=new Set(dates),out={};
+  dates.forEach(d=>out[d]=0);
+  try{
+    const db=await openDB();
+    const all=await new Promise((res,rej)=>{
+      const req=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).getAll();
+      req.onsuccess=()=>res(req.result||[]);
+      req.onerror=()=>rej(req.error);
+    });
+    for(const p of all){if(wanted.has(p.date))out[p.date]=(out[p.date]||0)+1;}
+  }catch(e){console.warn("photo count",e);}
+  return out;
+}
 function compressImage(file,maxSize=1400,quality=.78){
   return new Promise((resolve,reject)=>{
     const img=new Image();const url=URL.createObjectURL(file);
@@ -105,19 +136,43 @@ function populateCategories(){
 }
 async function render(){
   applyTheme();populateCategories();
-  await renderCalendar();renderSelectedDay();renderMonthSummary();renderMonthRecords();ensureRecurringForMonth();renderBudget();renderFixed();renderStats();renderReport();renderGoals();renderSubscriptions();renderYearly();renderSavings();renderBudgetWarning();await renderPhotos();
+  await renderCalendar();renderSelectedDay();renderMonthSummary();renderMonthRecords();ensureRecurringForMonth();renderBudget();renderFixed();renderStats();renderReport();renderSubscriptions();renderYearly();renderSavings();renderBudgetWarning();await renderPhotos();
 }
 async function renderCalendar(){
-  const y=viewDate.getFullYear(),m=viewDate.getMonth();$("monthTitle").textContent=`${y}년 ${m+1}월`;
-  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=isoDate(new Date()),cal=$("calendar");cal.innerHTML="";
-  const dates=[];for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);dates.push(isoDate(d))}
+  const y=viewDate.getFullYear(),m=viewDate.getMonth();
+  $("monthTitle").textContent=`${y}년 ${m+1}월`;
+  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay()),today=isoDate(new Date()),cal=$("calendar");
+  const dates=[];
+  for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);dates.push(isoDate(d))}
   const photoCounts=await photoCountsForDates(dates);
+  const frag=document.createDocumentFragment();
   for(let i=0;i<42;i++){
-    const d=new Date(start);d.setDate(start.getDate()+i);const date=isoDate(d),rs=recordsForDate(date),t=totals(rs),pc=photoCounts[date]||0;
-    const el=document.createElement("button");el.type="button";el.className="day";if(d.getMonth()!==m)el.classList.add("other");if(date===selectedDate)el.classList.add("selected");if(date===today)el.classList.add("today");
+    const d=new Date(start);d.setDate(start.getDate()+i);
+    const date=isoDate(d),rs=recordsForDate(date),t=totals(rs),pc=photoCounts[date]||0;
+    const el=document.createElement("button");
+    el.type="button";el.className="day";
+    if(d.getMonth()!==m)el.classList.add("other");
+    if(date===selectedDate)el.classList.add("selected");
+    if(date===today)el.classList.add("today");
     el.innerHTML=`<span class="day-num">${d.getDate()}</span><div class="day-money">${t.expense?`<div class="day-expense">-${money(t.expense)}</div>`:""}${t.income?`<div class="day-income">+${money(t.income)}</div>`:""}${pc?`<span class="photo-count">📷 ${pc}</span>`:""}</div>`;
-    el.onclick=()=>{selectedDate=date;if(d.getMonth()!==m)viewDate=new Date(d.getFullYear(),d.getMonth(),1);render()};cal.appendChild(el);
+    el.onclick=async()=>{
+      const monthChanged=d.getMonth()!==viewDate.getMonth()||d.getFullYear()!==viewDate.getFullYear();
+      selectedDate=date;
+      if(monthChanged){
+        viewDate=new Date(d.getFullYear(),d.getMonth(),1);
+        await render();
+      }else{
+        cal.querySelectorAll(".day.selected").forEach(x=>x.classList.remove("selected"));
+        el.classList.add("selected");
+        renderSelectedDay();
+        renderMonthSummary();
+        renderBudgetWarning();
+        await renderPhotos();
+      }
+    };
+    frag.appendChild(el);
   }
+  cal.replaceChildren(frag);
 }
 function renderSelectedDay(){
   const d=new Date(selectedDate+"T00:00:00");$("selectedDateTitle").textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
@@ -303,12 +358,22 @@ function deleteFixed(id){if(!confirm("이 고정비를 삭제할까요?"))return
 $("photoInput").onchange=async e=>{const files=[...(e.target.files||[])];for(const file of files){try{const blob=await compressImage(file);await addPhotoRecord({id:uid(),date:selectedDate,blob,createdAt:Date.now()})}catch(err){console.error(err)}}e.target.value="";await render()};
 async function openPhoto(id){const db=await openDB();const rec=await new Promise((res,rej)=>{const req=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).get(id);req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)});if(!rec)return;activePhotoId=id;$("viewerImage").src=URL.createObjectURL(rec.blob);$("photoViewer").classList.remove("hidden")}window.openPhoto=openPhoto;
 $("closeViewerBtn").onclick=()=>$("photoViewer").classList.add("hidden");$("deletePhotoBtn").onclick=async()=>{if(!activePhotoId||!confirm("이 사진을 삭제할까요?"))return;await deletePhotoRecord(activePhotoId);activePhotoId=null;$("photoViewer").classList.add("hidden");await render()};
-document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b===btn));document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+btn.dataset.tab));render()});
+document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b===btn));
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+btn.dataset.tab));
+  if(btn.dataset.tab==="budget")renderBudget();
+  else if(btn.dataset.tab==="fixed")renderFixed();
+  else if(btn.dataset.tab==="stats")renderStats();
+  else if(btn.dataset.tab==="report")renderReport();
+  else if(btn.dataset.tab==="subscriptions")renderSubscriptions();
+  else if(btn.dataset.tab==="yearly")renderYearly();
+  else if(btn.dataset.tab==="savings")renderSavings();
+});
 $("openCustomizeBtn").onclick=()=>$("customizeModal").classList.remove("hidden");$("closeCustomizeBtn").onclick=()=>$("customizeModal").classList.add("hidden");
 document.querySelectorAll(".theme-chip").forEach(b=>b.onclick=()=>{state.theme=b.dataset.theme;state.customColors=null;saveState();applyTheme()});
 document.querySelectorAll(".calendar-style-chip").forEach(b=>b.onclick=()=>{state.calendarStyle=b.dataset.style;saveState();applyTheme()});
 $("applyColorsBtn").onclick=()=>{state.customColors={bg:$("customBg").value,accent:$("customAccent").value,card:$("customCard").value};saveState();applyTheme()};
-$("emojiEditor").addEventListener("change",e=>{const i=Number(e.target.dataset.emojiIndex);if(Number.isInteger(i)&&state.categories[i]){state.categories[i].emoji=e.target.value||"✨";saveState();populateCategories();render()}});
+$("emojiEditor").addEventListener("change",e=>{const i=Number(e.target.dataset.emojiIndex);if(Number.isInteger(i)&&state.categories[i]){state.categories[i].emoji=e.target.value||"✨";saveState();populateCategories();renderSelectedDay();renderMonthRecords();renderStats();renderReport()}});
 $("backupBtn").onclick=()=>{const payload={...state,photosNotIncluded:true};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`가꾸가계부_백업_${isoDate(new Date())}.json`;a.click();URL.revokeObjectURL(a.href)};
 $("restoreInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.records))throw 0;if(!confirm("현재 기록을 백업파일 내용으로 교체할까요?"))return;Object.assign(state,data);saveState();render();alert("백업을 불러왔습니다. 사진은 브라우저 저장형이라 별도로 유지됩니다.")}catch{alert("올바른 백업파일이 아닙니다.")}finally{e.target.value=""}};
 
