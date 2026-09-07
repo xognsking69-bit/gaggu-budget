@@ -2,9 +2,15 @@ const STORAGE_KEY="gaggu_budget_v2";
 const DB_NAME="gaggu_photo_db_v1";
 const DB_STORE="photos";
 const defaultCategories=[
-  {name:"식비",emoji:"🍚"},{name:"카페",emoji:"☕"},{name:"교통",emoji:"🚌"},{name:"쇼핑",emoji:"🛍️"},
-  {name:"생활",emoji:"🧺"},{name:"고정비",emoji:"🏠"},{name:"의료",emoji:"💊"},{name:"여가",emoji:"🎬"},
-  {name:"급여",emoji:"💰"},{name:"용돈",emoji:"💌"},{name:"기타",emoji:"✨"}
+  {name:"식비",emoji:"🍚",type:"expense"},{name:"카페",emoji:"☕",type:"expense"},{name:"교통",emoji:"🚌",type:"expense"},
+  {name:"쇼핑",emoji:"🛍️",type:"expense"},{name:"생활",emoji:"🧺",type:"expense"},{name:"고정비",emoji:"🏠",type:"expense"},
+  {name:"의료",emoji:"💊",type:"expense"},{name:"여가",emoji:"🎬",type:"expense"},{name:"교육",emoji:"📚",type:"expense"},
+  {name:"육아",emoji:"🧸",type:"expense"},{name:"반려동물",emoji:"🐶",type:"expense"},{name:"미용",emoji:"💇",type:"expense"},
+  {name:"여행",emoji:"✈️",type:"expense"},{name:"경조사",emoji:"🎁",type:"expense"},{name:"보험",emoji:"🛡️",type:"expense"},
+  {name:"세금",emoji:"🧾",type:"expense"},{name:"대출",emoji:"🏦",type:"expense"},{name:"기타지출",emoji:"✨",type:"expense"},
+  {name:"급여",emoji:"💰",type:"income"},{name:"부수입",emoji:"💻",type:"income"},{name:"용돈",emoji:"💌",type:"income"},
+  {name:"상여금",emoji:"🎉",type:"income"},{name:"환급",emoji:"↩️",type:"income"},{name:"이자",emoji:"🌱",type:"income"},
+  {name:"중고판매",emoji:"📦",type:"income"},{name:"기타수입",emoji:"🪙",type:"income"}
 ];
 const state=loadState();
 let viewDate=new Date();viewDate.setDate(1);
@@ -24,12 +30,13 @@ function loadState(){
       calendarStyle:s.calendarStyle||"soft",
       customColors:s.customColors||null,
       categories:Array.isArray(s.categories)&&s.categories.length?s.categories:structuredClone(defaultCategories),
-      goals:Array.isArray(s.goals)?s.goals:[], subscriptions:Array.isArray(s.subscriptions)?s.subscriptions:[], categoryBudgets:s.categoryBudgets||{}, selectedYear:s.selectedYear||new Date().getFullYear()
+      goals:Array.isArray(s.goals)?s.goals:[], subscriptions:Array.isArray(s.subscriptions)?s.subscriptions:[], categoryBudgets:s.categoryBudgets||{}, selectedYear:s.selectedYear||new Date().getFullYear(), savings:Array.isArray(s.savings)?s.savings:[], savingGoals:Array.isArray(s.savingGoals)?s.savingGoals:[]
     };
   }catch{
-    return {records:[],monthlyBudget:{},fixed:[],theme:"cream",calendarStyle:"soft",customColors:null,categories:structuredClone(defaultCategories),goals:[],subscriptions:[],categoryBudgets:{},selectedYear:new Date().getFullYear()};
+    return {records:[],monthlyBudget:{},fixed:[],theme:"cream",calendarStyle:"soft",customColors:null,categories:structuredClone(defaultCategories),goals:[],subscriptions:[],categoryBudgets:{},selectedYear:new Date().getFullYear(),savings:[],savingGoals:[]};
   }
 }
+state.categories=state.categories.map(c=>({...c,type:c.type||(["급여","부수입","용돈","상여금","환급","이자","중고판매","기타수입"].includes(c.name)?"income":"expense")}));
 function saveState(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
 function isoDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function monthKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`}
@@ -77,14 +84,28 @@ function applyTheme(){
     document.documentElement.style.removeProperty("--card");
   }
 }
+function categoriesByType(type){
+  return state.categories.filter(c=>(c.type||(["급여","부수입","용돈","상여금","환급","이자","중고판매","기타수입"].includes(c.name)?"income":"expense"))===type);
+}
+function renderCategoryQuickPick(){
+  if(!$("categoryQuickPick"))return;
+  const type=document.querySelector('input[name="type"]:checked')?.value||"expense";
+  const list=categoriesByType(type);
+  if(!list.some(c=>c.name===$("category").value)) $("category").value=list[0]?.name||"";
+  $("categoryQuickPick").innerHTML=list.map(c=>`<button type="button" class="cat-chip ${$("category").value===c.name?"active":""}" data-pick-category="${esc(c.name)}">${esc(c.emoji)} ${esc(c.name)}</button>`).join("");
+}
 function populateCategories(){
-  const html=state.categories.map(c=>`<option value="${esc(c.name)}">${esc(c.emoji)} ${esc(c.name)}</option>`).join("");
-  $("category").innerHTML=html;$("fixedCategory").innerHTML=html;if($("subscriptionCategory"))$("subscriptionCategory").innerHTML=html;if($("quickCategory"))$("quickCategory").innerHTML=html;
+  const type=document.querySelector('input[name="type"]:checked')?.value||"expense";
+  const list=categoriesByType(type);
+  $("category").innerHTML=list.map(c=>`<option value="${esc(c.name)}">${esc(c.emoji)} ${esc(c.name)}</option>`).join("");
+  const expenseHtml=categoriesByType("expense").map(c=>`<option value="${esc(c.name)}">${esc(c.emoji)} ${esc(c.name)}</option>`).join("");
+  $("fixedCategory").innerHTML=expenseHtml;if($("subscriptionCategory"))$("subscriptionCategory").innerHTML=expenseHtml;if($("quickCategory"))$("quickCategory").innerHTML=expenseHtml;
   $("emojiEditor").innerHTML=state.categories.map((c,i)=>`<div class="emoji-row"><strong>${esc(c.name)}</strong><input data-emoji-index="${i}" value="${esc(c.emoji)}" maxlength="4"></div>`).join("");
+  renderCategoryQuickPick();
 }
 async function render(){
   applyTheme();populateCategories();
-  await renderCalendar();renderSelectedDay();renderMonthSummary();renderMonthRecords();ensureRecurringForMonth();renderBudget();renderFixed();renderStats();renderReport();renderGoals();renderSubscriptions();renderYearly();await renderPhotos();
+  await renderCalendar();renderSelectedDay();renderMonthSummary();renderMonthRecords();ensureRecurringForMonth();renderBudget();renderFixed();renderStats();renderReport();renderGoals();renderSubscriptions();renderYearly();renderSavings();renderBudgetWarning();await renderPhotos();
 }
 async function renderCalendar(){
   const y=viewDate.getFullYear(),m=viewDate.getMonth();$("monthTitle").textContent=`${y}년 ${m+1}월`;
@@ -101,7 +122,7 @@ async function renderCalendar(){
 function renderSelectedDay(){
   const d=new Date(selectedDate+"T00:00:00");$("selectedDateTitle").textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
   const rs=recordsForDate(selectedDate).sort((a,b)=>b.createdAt-a.createdAt),t=totals(rs);$("selectedDayTotal").textContent=`지출 ${money(t.expense)} · 수입 ${money(t.income)}`;
-  $("records").innerHTML=rs.length?rs.map(r=>`<article class="record"><div><b>${esc(catInfo(r.category).emoji)} ${esc(r.category)} · ${esc(r.description||"내용 없음")}</b><div class="record-meta">${esc(r.payment||"-")}${r.memo?" · "+esc(r.memo):""}</div></div><div class="record-amount ${r.type}">${r.type==="income"?"+":"-"}${money(r.amount)}</div><div class="record-actions"><button class="delete-btn" onclick="deleteRecord('${r.id}')">삭제</button></div></article>`).join(""):'<div class="empty">아직 기록이 없어요.</div>';
+  $("records").innerHTML=rs.length?rs.map(r=>`<article class="record"><div><b>${esc(catInfo(r.category).emoji)} ${esc(r.category)} · ${esc(r.description||"내용 없음")}</b><div class="record-meta">${esc(r.payment||"-")}${r.memo?" · "+esc(r.memo):""}</div></div><div class="record-amount ${r.type}">${r.type==="income"?"+":"-"}${money(r.amount)}</div><div class="record-actions"><button class="edit-btn" onclick="openEditRecord('${r.id}')">수정</button><button class="delete-btn" onclick="deleteRecord('${r.id}')">삭제</button></div></article>`).join(""):'<div class="empty">아직 기록이 없어요.</div>';
 }
 function renderMonthSummary(){
   const rs=state.records.filter(r=>r.date.startsWith(monthKey(viewDate))),t=totals(rs),budget=Number(state.monthlyBudget[monthKey(viewDate)]||0);
@@ -110,7 +131,37 @@ function renderMonthSummary(){
 function renderMonthRecords(){
   const mk=monthKey(viewDate),q=$("searchInput").value.trim().toLowerCase();
   const rs=state.records.filter(r=>r.date.startsWith(mk)).filter(r=>!q||[r.category,r.description,r.payment,r.memo].some(v=>String(v||"").toLowerCase().includes(q))).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
-  $("monthRecords").innerHTML=rs.length?rs.map(r=>`<article class="record"><div><b>${esc(r.date)} · ${esc(catInfo(r.category).emoji)} ${esc(r.category)} · ${esc(r.description||"내용 없음")}</b><div class="record-meta">${esc(r.payment||"-")}${r.memo?" · "+esc(r.memo):""}</div></div><div class="record-amount ${r.type}">${r.type==="income"?"+":"-"}${money(r.amount)}</div></article>`).join(""):'<div class="empty">이번 달 기록이 없습니다.</div>';
+  $("monthRecords").innerHTML=rs.length?rs.map(r=>`<article class="record"><div><b>${esc(r.date)} · ${esc(catInfo(r.category).emoji)} ${esc(r.category)} · ${esc(r.description||"내용 없음")}</b><div class="record-meta">${esc(r.payment||"-")}${r.memo?" · "+esc(r.memo):""}</div></div><div class="record-amount ${r.type}">${r.type==="income"?"+":"-"}${money(r.amount)}</div><div class="record-actions"><button class="edit-btn" onclick="openEditRecord('${r.id}')">수정</button><button class="delete-btn" onclick="deleteRecord('${r.id}')">삭제</button></div></article>`).join(""):'<div class="empty">이번 달 기록이 없습니다.</div>';
+}
+
+function getBudgetWarnings(){
+  const mk=monthKey(viewDate),cb=state.categoryBudgets[mk]||{},by={};
+  state.records.filter(r=>r.type==="expense"&&r.date.startsWith(mk)).forEach(r=>by[r.category]=(by[r.category]||0)+Number(r.amount||0));
+  const warnings=[];
+  for(const [cat,budgetRaw] of Object.entries(cb)){
+    const budget=Number(budgetRaw||0);if(!budget)continue;
+    const spent=Number(by[cat]||0),pct=Math.round(spent/budget*100);
+    if(pct>=80)warnings.push({cat,spent,budget,pct,level:pct>=100?"over":"warning"});
+  }
+  return warnings.sort((a,b)=>b.pct-a.pct);
+}
+function renderBudgetWarning(){
+  if(!$("budgetAlertBanner"))return;
+  const ws=getBudgetWarnings();
+  if(!ws.length){$("budgetAlertBanner").className="budget-alert hidden";$("budgetAlertBanner").innerHTML="";return;}
+  const top=ws[0];$("budgetAlertBanner").className=`budget-alert ${top.level}`;
+  $("budgetAlertBanner").innerHTML=top.level==="over"
+    ? `🚨 ${esc(catInfo(top.cat).emoji)} ${esc(top.cat)} 예산을 ${top.pct}% 사용했어요. 예산을 초과했어요!`
+    : `⚠️ ${esc(catInfo(top.cat).emoji)} ${esc(top.cat)} 예산을 ${top.pct}% 사용했어요. 조금만 주의해 주세요.`;
+}
+function maybeShowBudgetAlert(category){
+  const w=getBudgetWarnings().find(x=>x.cat===category);if(!w)return;
+  const key=`gaggu_warn_${monthKey(viewDate)}_${category}_${w.level}`;
+  if(sessionStorage.getItem(key))return;
+  sessionStorage.setItem(key,"1");
+  alert(w.level==="over"
+    ? `🚨 ${catInfo(category).emoji} ${category} 예산 초과\n\n${w.pct}% 사용했어요.\n지출 ${money(w.spent)} / 예산 ${money(w.budget)}`
+    : `⚠️ ${catInfo(category).emoji} ${category} 예산 주의\n\n${w.pct}% 사용했어요.\n지출 ${money(w.spent)} / 예산 ${money(w.budget)}`);
 }
 function renderBudget(){
   const mk=monthKey(viewDate),budget=Number(state.monthlyBudget[mk]||0),rs=state.records.filter(r=>r.date.startsWith(mk)&&r.type==="expense"),spent=totals(rs).expense,remain=Math.max(0,budget-spent),pct=budget?Math.min(100,(spent/budget)*100):0;
@@ -128,7 +179,7 @@ function renderBudget(){
   }).join("");
 }
 function renderFixed(){
-  $("fixedList").innerHTML=state.fixed.length?state.fixed.map(f=>`<article class="fixed-item"><div><b>${esc(catInfo(f.category).emoji)} ${esc(f.name)}</b><div class="record-meta">매월 ${f.day}일 · ${esc(f.category)}${f.memo?" · "+esc(f.memo):""}${f.auto!==false?" · 자동반영":" · 수동"}</div></div><strong>${money(f.amount)}</strong><div class="record-actions"><button class="soft-btn" onclick="addFixedToMonth('${f.id}')">이번 달 반영</button><button class="delete-btn" onclick="deleteFixed('${f.id}')">삭제</button></div></article>`).join(""):'<div class="empty">등록된 고정비가 없어요.</div>';
+  $("fixedList").innerHTML=state.fixed.length?state.fixed.map(f=>`<article class="fixed-item"><div><b>${esc(catInfo(f.category).emoji)} ${esc(f.name)} <span class="status-chip ${f.ended?"ended":"active"}">${f.ended?"해지":"사용중"}</span></b><div class="record-meta">매월 ${f.day}일 · ${esc(f.category)}${f.memo?" · "+esc(f.memo):""}${!f.ended?" · 자동반영":""}</div></div><strong>${money(f.amount)}</strong><div class="record-actions">${!f.ended?`<button class="end-btn" onclick="endFixed('${f.id}')">해지</button>`:""}<button class="delete-btn" onclick="deleteFixed('${f.id}')">삭제</button></div></article>`).join(""):'<div class="empty">등록된 고정비가 없어요.</div>';
 }
 function renderStats(){
   const mk=monthKey(viewDate),rs=state.records.filter(r=>r.date.startsWith(mk)),t=totals(rs),saveRate=t.income?Math.max(0,Math.round((t.balance/t.income)*100)):0;$("statIncome").textContent=money(t.income);$("statExpense").textContent=money(t.expense);$("savingRate").textContent=saveRate+"%";
@@ -138,15 +189,117 @@ function renderStats(){
 async function renderPhotos(){
   const photos=await getPhotosByDate(selectedDate);$("photoGrid").innerHTML=photos.length?photos.map(p=>`<button class="photo-thumb" onclick="openPhoto('${p.id}')"><img src="${URL.createObjectURL(p.blob)}"></button>`).join(""):'<div class="empty" style="grid-column:1/-1">사진을 추가하면 여기에 모여요.</div>';
 }
-$("entryForm").addEventListener("submit",e=>{e.preventDefault();const amount=Number($("amount").value);if(!amount||amount<=0)return alert("금액을 입력해 주세요.");const type=document.querySelector('input[name="type"]:checked').value;state.records.push({id:uid(),date:selectedDate,type,category:$("category").value,description:$("description").value.trim(),amount,payment:$("payment").value,memo:$("memo").value.trim(),createdAt:Date.now()});saveState();$("description").value="";$("amount").value="";$("memo").value="";render()});
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-pick-category]");
+  if(!b)return;
+  $("category").value=b.dataset.pickCategory;
+  renderCategoryQuickPick();
+});
+document.querySelectorAll('input[name="type"]').forEach(r=>r.addEventListener("change",()=>{
+  populateCategories();
+}));
+
+$("entryForm").addEventListener("submit",e=>{e.preventDefault();const amount=Number($("amount").value);if(!amount||amount<=0)return alert("금액을 입력해 주세요.");const type=document.querySelector('input[name="type"]:checked').value;state.records.push({id:uid(),date:selectedDate,type,category:$("category").value,description:$("description").value.trim(),amount,payment:$("payment").value,memo:$("memo").value.trim(),createdAt:Date.now()});saveState();const savedCategory=$("category").value;$("description").value="";$("amount").value="";$("memo").value="";render().then(()=>maybeShowBudgetAlert(savedCategory))});
+
+let editingRecordId=null;
+
+function populateEditCategories(type,selected){
+  const list=categoriesByType(type);
+  $("editCategory").innerHTML=list.map(c=>`<option value="${esc(c.name)}">${esc(c.emoji)} ${esc(c.name)}</option>`).join("");
+  if(selected && list.some(c=>c.name===selected)) $("editCategory").value=selected;
+}
+
+function openEditRecord(id){
+  const r=state.records.find(x=>x.id===id);
+  if(!r)return;
+  editingRecordId=id;
+  document.querySelectorAll('input[name="editType"]').forEach(el=>el.checked=el.value===r.type);
+  populateEditCategories(r.type,r.category);
+  $("editDate").value=r.date;
+  $("editDescription").value=r.description||"";
+  $("editAmount").value=r.amount||"";
+  $("editPayment").value=[...$("editPayment").options].some(o=>o.value===r.payment)?r.payment:"기타";
+  $("editMemo").value=r.memo||"";
+  $("editRecordModal").classList.remove("hidden");
+}
+window.openEditRecord=openEditRecord;
+
+document.querySelectorAll('input[name="editType"]').forEach(el=>{
+  el.addEventListener("change",()=>{
+    const current=$("editCategory").value;
+    populateEditCategories(el.value,current);
+  });
+});
+
+if($("closeEditRecordBtn"))$("closeEditRecordBtn").onclick=()=>{
+  editingRecordId=null;
+  $("editRecordModal").classList.add("hidden");
+};
+
+if($("editRecordForm"))$("editRecordForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const r=state.records.find(x=>x.id===editingRecordId);
+  if(!r)return;
+  const amount=Number($("editAmount").value);
+  if(!amount||amount<=0)return alert("금액을 입력해 주세요.");
+  const type=document.querySelector('input[name="editType"]:checked')?.value||"expense";
+
+  r.type=type;
+  r.date=$("editDate").value||r.date;
+  r.category=$("editCategory").value;
+  r.description=$("editDescription").value.trim();
+  r.amount=amount;
+  r.payment=$("editPayment").value;
+  r.memo=$("editMemo").value.trim();
+  r.updatedAt=Date.now();
+
+  saveState();
+  selectedDate=r.date;
+  const d=new Date(r.date+"T00:00:00");
+  viewDate=new Date(d.getFullYear(),d.getMonth(),1);
+  editingRecordId=null;
+  $("editRecordModal").classList.add("hidden");
+  await render();
+  maybeShowBudgetAlert(r.category);
+  showToast("기록을 수정했어요 ♡");
+});
+
 function deleteRecord(id){const i=state.records.findIndex(r=>r.id===id);if(i<0||!confirm("이 기록을 삭제할까요?"))return;state.records.splice(i,1);saveState();render()}window.deleteRecord=deleteRecord;
 $("clearDayBtn").onclick=()=>{const rs=recordsForDate(selectedDate);if(!rs.length)return;if(!confirm("이날 기록을 모두 삭제할까요?"))return;state.records=state.records.filter(r=>r.date!==selectedDate);saveState();render()};
 $("prevMonth").onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);render()};$("nextMonth").onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);render()};$("todayBtn").onclick=()=>{const n=new Date();viewDate=new Date(n.getFullYear(),n.getMonth(),1);selectedDate=isoDate(n);render()};
 $("searchInput").oninput=renderMonthRecords;
 $("saveBudgetBtn").onclick=()=>{state.monthlyBudget[monthKey(viewDate)]=Number($("monthlyBudget").value||0);saveState();render()};
-$("fixedForm").addEventListener("submit",e=>{e.preventDefault();const amount=Number($("fixedAmount").value),day=Number($("fixedDay").value);if(!$("fixedName").value.trim()||!amount||!day)return alert("이름, 금액, 결제일을 입력해 주세요.");state.fixed.push({id:uid(),name:$("fixedName").value.trim(),amount,day,category:$("fixedCategory").value,memo:$("fixedMemo").value.trim(),auto:$("fixedAuto")?$("fixedAuto").checked:true});saveState();e.target.reset();populateCategories();renderFixed()});
+$("fixedForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const amount=Number($("fixedAmount").value),day=Number($("fixedDay").value),name=$("fixedName").value.trim();
+  if(!name||!amount||!day)return alert("이름, 금액, 결제일을 입력해 주세요.");
+  const f={id:uid(),name,amount,day,category:$("fixedCategory").value,memo:$("fixedMemo").value.trim(),auto:true,ended:false};
+  state.fixed.push(f);
+  saveState();
+  applyFixedForMonth(f,viewDate);
+  e.target.reset();
+  if($("fixedAuto"))$("fixedAuto").checked=true;
+  populateCategories();render();showToast("고정비가 저장되고 이번 달 달력에 반영됐어요 ♡");
+});
+
+function applyFixedForMonth(f,d){
+  if(!f||f.ended)return;
+  const mk=monthKey(d);
+  if(state.records.some(r=>r.fixedId===f.id&&r.date.startsWith(mk)))return;
+  const y=d.getFullYear(),m=d.getMonth(),day=Math.min(Number(f.day||1),new Date(y,m+1,0).getDate());
+  const date=`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  state.records.push({id:uid(),fixedId:f.id,date,type:"expense",category:f.category,description:f.name,amount:Number(f.amount||0),payment:"자동",memo:f.memo||"고정비",createdAt:Date.now()});
+  saveState();
+}
+function endFixed(id){
+  const f=state.fixed.find(x=>x.id===id);if(!f)return;
+  if(!confirm(`${f.name} 고정비를 해지할까요?\n이미 기록된 과거 지출은 그대로 유지됩니다.`))return;
+  f.ended=true;f.auto=false;f.endedAt=isoDate(new Date());saveState();render();showToast("고정비를 해지했어요.");
+}window.endFixed=endFixed;
+
 function deleteFixed(id){if(!confirm("이 고정비를 삭제할까요?"))return;state.fixed=state.fixed.filter(f=>f.id!==id);saveState();renderFixed()}window.deleteFixed=deleteFixed;
-function addFixedToMonth(id){const f=state.fixed.find(x=>x.id===id);if(!f)return;const y=viewDate.getFullYear(),m=viewDate.getMonth(),last=new Date(y,m+1,0).getDate(),day=Math.min(f.day,last),date=`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;const exists=state.records.some(r=>r.fixedId===f.id&&r.date.startsWith(monthKey(viewDate)));if(exists&&!confirm("이미 이번 달에 반영된 기록이 있어요. 다시 추가할까요?"))return;state.records.push({id:uid(),fixedId:f.id,date,type:"expense",category:f.category,description:f.name,amount:f.amount,payment:"자동",memo:f.memo,createdAt:Date.now()});saveState();render();alert("이번 달 고정비에 반영했어요.")}window.addFixedToMonth=addFixedToMonth;
+
 $("photoInput").onchange=async e=>{const files=[...(e.target.files||[])];for(const file of files){try{const blob=await compressImage(file);await addPhotoRecord({id:uid(),date:selectedDate,blob,createdAt:Date.now()})}catch(err){console.error(err)}}e.target.value="";await render()};
 async function openPhoto(id){const db=await openDB();const rec=await new Promise((res,rej)=>{const req=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).get(id);req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)});if(!rec)return;activePhotoId=id;$("viewerImage").src=URL.createObjectURL(rec.blob);$("photoViewer").classList.remove("hidden")}window.openPhoto=openPhoto;
 $("closeViewerBtn").onclick=()=>$("photoViewer").classList.add("hidden");$("deletePhotoBtn").onclick=async()=>{if(!activePhotoId||!confirm("이 사진을 삭제할까요?"))return;await deletePhotoRecord(activePhotoId);activePhotoId=null;$("photoViewer").classList.add("hidden");await render()};
@@ -215,7 +368,7 @@ if($("quickSaveBtn"))$("quickSaveBtn").onclick=()=>{
   const amount=Number($("quickAmount").value);
   if(!amount||amount<=0)return alert("금액을 입력해 주세요.");
   state.records.push({id:uid(),date:selectedDate,type:"expense",category:$("quickCategory").value,description:$("quickDescription").value.trim()||"빠른 지출",amount,payment:"빠른입력",memo:"",createdAt:Date.now()});
-  saveState();$("quickAmount").value="";$("quickDescription").value="";render();showToast("빠르게 기록했어요 ♡");
+  saveState();const savedCategory=$("quickCategory").value;$("quickAmount").value="";$("quickDescription").value="";render().then(()=>maybeShowBudgetAlert(savedCategory));showToast("빠르게 기록했어요 ♡");
 };
 
 function recurringRecordExists(kind,id,mk){
@@ -225,7 +378,7 @@ function ensureRecurringForMonth(){
   const mk=monthKey(viewDate),y=viewDate.getFullYear(),m=viewDate.getMonth();
   let changed=false;
   for(const f of state.fixed){
-    if(f.auto===false||recurringRecordExists("fixed",f.id,mk))continue;
+    if(f.ended||f.auto===false||recurringRecordExists("fixed",f.id,mk))continue;
     const day=Math.min(Number(f.day||1),new Date(y,m+1,0).getDate());
     const date=`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     state.records.push({id:uid(),fixedId:f.id,date,type:"expense",category:f.category,description:f.name,amount:Number(f.amount||0),payment:"자동",memo:f.memo||"고정비 자동반영",createdAt:Date.now()});
@@ -240,6 +393,110 @@ function ensureRecurringForMonth(){
   }
   if(changed)saveState();
 }
+
+
+function savingGoalProgress(goal){
+  const linked=state.savings.filter(s=>s.goalId===goal.id);
+  const deposit=linked.filter(s=>s.type==="deposit").reduce((a,s)=>a+Number(s.amount||0),0);
+  const withdraw=linked.filter(s=>s.type==="withdraw").reduce((a,s)=>a+Number(s.amount||0),0);
+  const current=Math.max(0,deposit-withdraw),target=Number(goal.target||0);
+  return {current,target,remain:Math.max(0,target-current),pct:target?Math.min(100,Math.round(current/target*100)):0};
+}
+function daysBetween(a,b){
+  const d1=new Date(a+"T00:00:00"),d2=new Date(b+"T00:00:00");
+  return Math.max(0,Math.ceil((d2-d1)/86400000));
+}
+function renderSavingGoals(){
+  if(!$("savingGoalCards"))return;
+  const today=isoDate(new Date());
+  $("savingGoalSelect").innerHTML='<option value="">목표 없이 기록</option>'+state.savingGoals.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("");
+  $("savingGoalCards").innerHTML=state.savingGoals.length?state.savingGoals.map(g=>{
+    const p=savingGoalProgress(g);
+    const totalDays=Math.max(1,daysBetween(g.start,g.end));
+    const daysLeft=daysBetween(today,g.end);
+    const daily=daysLeft?p.remain/daysLeft:p.remain;
+    const monthsLeft=Math.max(1,daysLeft/30.44);
+    const monthly=p.remain/monthsLeft;
+    const complete=p.current>=p.target&&p.target>0;
+    return `<article class="saving-goal-card">
+      <div class="saving-goal-head">
+        <div>
+          <h3>🌱 ${esc(g.name)}</h3>
+          <div class="record-meta">${esc(g.start)} → ${esc(g.end)}</div>
+        </div>
+        <span class="saving-goal-percent">${p.pct}%</span>
+      </div>
+      <div class="saving-goal-progress"><div style="width:${p.pct}%"></div></div>
+      <div class="saving-goal-stats">
+        <div><span>현재 모은 금액</span><strong>${money(p.current)}</strong></div>
+        <div><span>목표 금액</span><strong>${money(p.target)}</strong></div>
+        <div><span>남은 금액</span><strong>${money(p.remain)}</strong></div>
+      </div>
+      ${complete
+        ? `<div class="saving-goal-complete">🎉 목표 달성! 정말 잘했어요 ♡</div>`
+        : `<div class="saving-goal-guide">⏰ 목표일까지 <b>${daysLeft}일</b> 남았어요.<br>하루 약 <b>${money(daily)}</b> 또는 한 달 약 <b>${money(monthly)}</b>씩 모으면 목표에 가까워져요.</div>`
+      }
+      <div class="saving-goal-actions">
+        <button class="delete-btn" onclick="deleteSavingGoal('${g.id}')">목표 삭제</button>
+      </div>
+    </article>`;
+  }).join(""):'<div class="empty">아직 저축 목표가 없어요. 여행, 비상금, 자동차처럼 재미있는 목표를 만들어보세요 ♡</div>';
+}
+function renderSavings(){
+  if(!$("savingsList"))return;
+  const deposits=state.savings.filter(s=>s.type==="deposit").reduce((a,s)=>a+Number(s.amount||0),0);
+  const withdraws=state.savings.filter(s=>s.type==="withdraw").reduce((a,s)=>a+Number(s.amount||0),0);
+  const balance=deposits-withdraws;
+  $("savingsTotalPill").textContent=money(balance);$("savingsDepositTotal").textContent=money(deposits);$("savingsWithdrawTotal").textContent=money(withdraws);$("savingsBalance").textContent=money(balance);
+  renderSavingGoals();
+  const sorted=[...state.savings].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
+  $("savingsList").innerHTML=sorted.length?sorted.map(s=>{
+    const goal=state.savingGoals.find(g=>g.id===s.goalId);
+    return `<article class="record"><div><b>${s.type==="deposit"?"🐷 저축":"💸 출금"} · ${esc(s.name)}</b><div class="record-meta">${esc(s.date)}${goal?` · 🎯 ${esc(goal.name)}`:""}${s.memo?" · "+esc(s.memo):""}</div></div><div class="record-amount ${s.type==="deposit"?"income":"expense"}">${s.type==="deposit"?"+":"-"}${money(s.amount)}</div><div class="record-actions"><button class="delete-btn" onclick="deleteSaving('${s.id}')">삭제</button></div></article>`;
+  }).join(""):'<div class="empty">저축 기록이 아직 없어요. 첫 저축을 시작해 보세요 ♡</div>';
+}
+
+if($("savingGoalStart"))$("savingGoalStart").value=isoDate(new Date());
+if($("savingGoalEnd")){
+  const d=new Date();d.setMonth(d.getMonth()+6);$("savingGoalEnd").value=isoDate(d);
+}
+if($("savingGoalForm"))$("savingGoalForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("savingGoalName").value.trim(),target=Number($("savingGoalTarget").value);
+  const start=$("savingGoalStart").value,end=$("savingGoalEnd").value;
+  if(!name||!target||!start||!end)return alert("목표 이름, 금액, 시작일, 목표일을 모두 입력해 주세요.");
+  if(new Date(end)<new Date(start))return alert("목표일은 시작일보다 뒤여야 해요.");
+  state.savingGoals.push({id:uid(),name,target,start,end,createdAt:Date.now()});
+  saveState();e.target.reset();$("savingGoalStart").value=isoDate(new Date());
+  const d=new Date();d.setMonth(d.getMonth()+6);$("savingGoalEnd").value=isoDate(d);
+  renderSavings();showToast("새 저축 목표를 만들었어요 🌱");
+});
+function deleteSavingGoal(id){
+  const goal=state.savingGoals.find(g=>g.id===id);if(!goal)return;
+  if(!confirm(`${goal.name} 목표를 삭제할까요?\n연결된 저축 기록은 삭제되지 않고 그대로 남습니다.`))return;
+  state.savingGoals=state.savingGoals.filter(g=>g.id!==id);
+  state.savings.forEach(s=>{if(s.goalId===id)s.goalId=""});
+  saveState();renderSavings();
+}window.deleteSavingGoal=deleteSavingGoal;
+
+if($("savingDate"))$("savingDate").value=isoDate(new Date());
+if($("savingsForm"))$("savingsForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const amount=Number($("savingAmount").value),goalId=$("savingGoalSelect").value,date=$("savingDate").value||isoDate(new Date());
+  const goal=state.savingGoals.find(g=>g.id===goalId);
+  const name=$("savingName").value.trim()||goal?.name||"저축";
+  if(!amount)return alert("저축 금액을 입력해 주세요.");
+  const type=document.querySelector('input[name="savingType"]:checked')?.value||"deposit";
+  state.savings.push({id:uid(),type,name,amount,date,goalId,memo:$("savingMemo").value.trim(),createdAt:Date.now()});saveState();
+  $("savingAmount").value="";$("savingMemo").value="";renderSavings();
+  if(goalId){
+    const p=savingGoalProgress(goal);
+    showToast(p.pct>=100?`🎉 ${goal.name} 목표 달성!`:`${goal.name} 목표 ${p.pct}% 달성 ♡`);
+  }else{
+    showToast(type==="deposit"?"저축했어요 ♡":"저축에서 꺼내 쓴 금액을 기록했어요.");
+  }
+});
+function deleteSaving(id){if(!confirm("이 저축 기록을 삭제할까요?"))return;state.savings=state.savings.filter(s=>s.id!==id);saveState();renderSavings()}window.deleteSaving=deleteSaving;
 
 function yearTotals(year){
   const rs=state.records.filter(r=>r.date.startsWith(String(year)+"-"));

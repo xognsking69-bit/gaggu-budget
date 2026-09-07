@@ -29,6 +29,7 @@
     <button class="tab" data-tab="goals">🎯 저축 목표</button>
     <button class="tab" data-tab="subscriptions">💳 구독</button>
     <button class="tab" data-tab="yearly">🗓️ 연간</button>
+    <button class="tab" data-tab="savings">🐷 저축</button>
   </nav>
 
   <main>
@@ -39,6 +40,7 @@
         <article class="summary-card balance"><span>이번 달 잔액</span><strong id="balanceTotal">0원</strong></article>
         <article class="summary-card budget"><span>남은 예산</span><strong id="budgetRemain">0원</strong></article>
       </section>
+      <div id="budgetAlertBanner" class="budget-alert hidden"></div>
 
       <section class="paper-card calendar-card">
         <div class="calendar-head">
@@ -89,9 +91,11 @@
           </div>
 
           <div class="form-grid">
-            <label>카테고리
-              <select id="category"></select>
-            </label>
+            <div class="wide category-pick-wrap">
+              <div class="field-label">종류 빠르게 선택</div>
+              <div id="categoryQuickPick" class="category-quick-pick"></div>
+              <select id="category" class="hidden-select" aria-label="카테고리"></select>
+            </div>
             <label>내용
               <input id="description" placeholder="예: 점심, 월급, 마트">
             </label>
@@ -183,7 +187,7 @@
     <section id="tab-fixed" class="tab-panel">
       <section class="paper-card">
         <div class="section-row">
-          <div><span class="eyebrow">FIXED EXPENSE</span><h2>고정비 관리</h2></div>
+          <div><span class="eyebrow">FIXED EXPENSE</span><h2>고정비 관리</h2><p class="muted">저장하면 이번 달 달력에 바로 반영되고, 이후 매달 자동으로 기록돼요.</p></div>
         </div>
         <form id="fixedForm" class="form-grid compact">
           <label>이름<input id="fixedName" placeholder="예: 월세"></label>
@@ -277,8 +281,97 @@
         <div id="yearCategoryBars" class="category-bars"></div>
       </section>
     </section>
+
+    <section id="tab-savings" class="tab-panel">
+      <section class="paper-card">
+        <div class="section-row">
+          <div><span class="eyebrow">SAVINGS BOOK</span><h2>🐷 저축 관리</h2><p class="muted">지출·수입과 별도로 내가 모은 돈만 따로 관리해요.</p></div>
+          <span id="savingsTotalPill" class="pill">0원</span>
+        </div>
+
+        <div class="saving-goal-create">
+          <div class="section-row">
+            <div>
+              <h3>🌱 새 저축 목표 만들기</h3>
+              <p class="muted">목표 금액과 기간을 정하면 필요한 저축 속도를 자동으로 계산해요.</p>
+            </div>
+          </div>
+          <form id="savingGoalForm" class="form-grid compact">
+            <label>목표 이름<input id="savingGoalName" placeholder="예: 일본 여행, 비상금"></label>
+            <label>목표 금액<input id="savingGoalTarget" type="number" inputmode="numeric" min="1" placeholder="예: 1000000"></label>
+            <label>시작일<input id="savingGoalStart" type="date"></label>
+            <label>목표일<input id="savingGoalEnd" type="date"></label>
+            <button class="primary-btn wide" type="submit">저축 목표 만들기</button>
+          </form>
+        </div>
+
+        <div id="savingGoalCards" class="saving-goal-cards"></div>
+
+        <div class="saving-record-box">
+          <div class="section-row">
+            <div>
+              <h3>🐷 저축 기록하기</h3>
+              <p class="muted">목표를 선택하면 저축 금액이 해당 목표 진행률에 자동 반영돼요.</p>
+            </div>
+          </div>
+          <form id="savingsForm" class="form-grid compact">
+            <div class="wide segmented savings-segment">
+              <label><input type="radio" name="savingType" value="deposit" checked><span>저축하기</span></label>
+              <label><input type="radio" name="savingType" value="withdraw"><span>꺼내쓰기</span></label>
+            </div>
+            <label>연결할 목표
+              <select id="savingGoalSelect">
+                <option value="">목표 없이 기록</option>
+              </select>
+            </label>
+            <label>저축 이름<input id="savingName" placeholder="예: 비상금, 여행통장"></label>
+            <label>금액<input id="savingAmount" type="number" inputmode="numeric" min="1" placeholder="예: 100000"></label>
+            <label>날짜<input id="savingDate" type="date"></label>
+            <label class="wide">메모<input id="savingMemo" placeholder="선택 입력"></label>
+            <button class="primary-btn wide" type="submit">저축 기록 저장</button>
+          </form>
+        </div>
+
+        <div class="savings-summary">
+          <div><span>총 저축</span><strong id="savingsDepositTotal">0원</strong></div>
+          <div><span>꺼내쓴 돈</span><strong id="savingsWithdrawTotal">0원</strong></div>
+          <div><span>현재 저축 잔액</span><strong id="savingsBalance">0원</strong></div>
+        </div>
+        <div id="savingsList" class="records"></div>
+      </section>
+    </section>
     </section>
   </main>
+</div>
+
+
+<div id="editRecordModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="section-row">
+      <div><span class="eyebrow">EDIT RECORD</span><h2>기록 수정</h2></div>
+      <button id="closeEditRecordBtn" class="round-btn">×</button>
+    </div>
+
+    <form id="editRecordForm" class="form-grid compact">
+      <div class="wide segmented">
+        <label><input type="radio" name="editType" value="expense"><span>지출</span></label>
+        <label><input type="radio" name="editType" value="income"><span>수입</span></label>
+      </div>
+
+      <label>날짜<input id="editDate" type="date"></label>
+      <label>종류<select id="editCategory"></select></label>
+      <label>내용<input id="editDescription"></label>
+      <label>금액<input id="editAmount" type="number" inputmode="numeric" min="1"></label>
+      <label>결제수단
+        <select id="editPayment">
+          <option>카드</option><option>현금</option><option>계좌이체</option><option>간편결제</option><option>자동</option><option>빠른입력</option><option>기타</option>
+        </select>
+      </label>
+      <label>메모<input id="editMemo"></label>
+
+      <button class="primary-btn wide" type="submit">수정 내용 저장</button>
+    </form>
+  </div>
 </div>
 
 <div id="customizeModal" class="modal hidden">
